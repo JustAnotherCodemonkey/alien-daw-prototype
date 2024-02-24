@@ -10,5 +10,6 @@ async-channel = "2.2.0"
 cpal = "0.15.2"
 env_logger = "0.11.2"
 log = "0.4.20"
+tokio = { version = "1.36.0", features = ["full"] }
 wgpu = "0.19.1"
 winit = "0.29.10"
