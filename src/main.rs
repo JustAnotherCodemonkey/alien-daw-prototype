@@ -1,8 +1,15 @@
-use wgpu;
-use winit;
-use cpal;
-use async_channel;
+use tokio::runtime::Builder;
+use tracing::instrument;
 
-fn main() {
+fn main() -> Result<(), anyhow::Error> {
+    tracing_subscriber::fmt().init();
     
+    let rt = Builder::new_multi_thread().build()?;
+    let logic_task = rt.spawn(logic());
+
+    println!("Hello, world!");
+    Ok(())
 }
+
+#[instrument]
+async fn logic() {}
