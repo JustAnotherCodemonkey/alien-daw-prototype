@@ -1,11 +1,15 @@
 #![allow(dead_code)]
+
+mod sound;
+mod synth;
+
 use tokio::runtime::Builder;
 use tracing::instrument;
 use winit::{dpi::PhysicalSize, event::*, event_loop::{ControlFlow, EventLoop}, window::WindowBuilder};
 
 fn main() -> Result<(), anyhow::Error> {
     tracing_subscriber::fmt().init();
-    
+
     let rt = Builder::new_multi_thread().build()?;
     let logic_task = rt.spawn(logic());
     build_window();
