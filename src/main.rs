@@ -1,12 +1,16 @@
 #![allow(dead_code)]
+
+
 use tokio::runtime::Builder;
 use tracing::instrument;
-use winit::{
+pub use winit::{
     dpi::PhysicalSize,
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::{Window, WindowBuilder},
 };
+
+pub mod backend;
 
 fn main() -> Result<(), anyhow::Error> {
     tracing_subscriber::fmt().init();
@@ -21,7 +25,7 @@ fn main() -> Result<(), anyhow::Error> {
 #[instrument]
 async fn logic() {}
 
-fn build_window(){
+fn build_window() {
     let evntloop = EventLoop::new().unwrap();
     let window = WindowBuilder::new().build(&evntloop).unwrap();
     window.set_title("ALIEN DAW");
