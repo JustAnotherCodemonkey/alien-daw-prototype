@@ -66,14 +66,24 @@ impl CurrentWindowState {
             .copied()
             .filter(|f| f.is_srgb())
             .next()
-            .unwrap_or(surface_capabilities.formats[0]);
+            .unwrap_or(
+                surface_capabilities
+                    .formats
+                    .get(0)
+                    .expect("surface supported no formats")
+                    .clone(),
+            );
         let configuration = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_fmt,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: surface_capabilities.alpha_modes[0],
+            alpha_mode: surface_capabilities
+                .alpha_modes
+                .get(0)
+                .expect("surface supported no alpha modes")
+                .clone(),
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
