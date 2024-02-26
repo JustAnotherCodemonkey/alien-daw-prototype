@@ -1,13 +1,13 @@
 use crate::*;
 
 //https://sotrh.github.io/learn-wgpu/beginner/tutorial2-surface/#first-some-housekeeping-state
-struct CurrentWindowState <'a>{
-    surface: wgpu::Surface <'a>,
+struct CurrentWindowState{
+    surface: wgpu::Surface <'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     configuration: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
-    window: &'a Window,
+    window: Arc<Window>,
 }
 
 // struct CloneableWindow{
@@ -30,15 +30,15 @@ struct CurrentWindowState <'a>{
 //     }
 // }
 
-impl<'a> CurrentWindowState<'a> {
-    async fn new(window: &'a Window) -> Self {
+impl CurrentWindowState{
+    async fn new(window: Arc<Window>) -> Self {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
         let surface = wgpu::Instance
-            ::create_surface(&instance, &window)
+            ::create_surface(&instance, window.clone())
             .expect("Creation of surface failed!");
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptionsBase{
