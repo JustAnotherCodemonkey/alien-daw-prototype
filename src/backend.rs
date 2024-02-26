@@ -1,4 +1,5 @@
 use crate::*;
+use std::sync::Arc;
 
 //https://sotrh.github.io/learn-wgpu/beginner/tutorial2-surface/#first-some-housekeeping-state
 struct CurrentWindowState{
@@ -7,7 +8,7 @@ struct CurrentWindowState{
     queue: wgpu::Queue,
     configuration: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
-    window: Arc<Window>,
+    window: &'a Window,
 }
 
 // struct CloneableWindow{
@@ -41,7 +42,7 @@ impl CurrentWindowState{
             ::create_surface(&instance, window.clone())
             .expect("Creation of surface failed!");
         let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptionsBase{
+            .request_adapter(&wgpu::RequestAdapterOptionsBase {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
@@ -67,7 +68,7 @@ impl CurrentWindowState{
             .filter(|f| f.is_srgb())
             .next()
             .unwrap_or(surface_capabilities.formats[0]);
-        let config = wgpu::SurfaceConfiguration{
+        let configuration = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_fmt,
             width: size.width,
@@ -75,17 +76,17 @@ impl CurrentWindowState{
             present_mode: wgpu::PresentMode::Fifo,
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
-            desired_maximum_frame_latency: 2
+            desired_maximum_frame_latency: 2,
         };
         // let new_window = CloneableWindow::from_window(window).clone().to_window();
-        return Self{
-            surface: surface,
-            device: device,
-            queue: queue,
-            configuration: config,
-            size: size,
-            window: window
-        }
+        return Self {
+            surface,
+            device,
+            queue,
+            configuration,
+            size,
+            window,
+        };
     }
     fn resize(&mut self, new: PhysicalSize<u32>) {
         todo!()
