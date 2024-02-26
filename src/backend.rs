@@ -8,7 +8,7 @@ struct CurrentWindowState{
     queue: wgpu::Queue,
     configuration: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
-    window: &'a Window,
+    window: Arc<Window>,
 }
 
 // struct CloneableWindow{
