@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+mod sound;
+mod synth;
 
 use tokio::runtime::Builder;
 use tracing::instrument;
