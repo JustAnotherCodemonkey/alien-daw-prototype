@@ -1,3 +1,5 @@
+pub mod synth;
+
 use crate::synth::{Clip, Mixer, Synth};
 use cpal::{
     default_host,

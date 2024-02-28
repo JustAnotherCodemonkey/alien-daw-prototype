@@ -4,7 +4,6 @@ pub use std::sync::Arc;
 
 
 mod sound;
-mod synth;
 use tokio::runtime::Builder;
 use tracing::instrument;
 pub use winit::{
