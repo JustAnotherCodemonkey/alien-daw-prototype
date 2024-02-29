@@ -1,8 +1,10 @@
+use std::fmt::Debug;
 use thiserror::Error;
 
-pub struct Clip<T> {
-    inner: T,
-    max_vol: VolumeControl,
+#[derive(Clone, Debug, Default)]
+pub struct Clip<T: Synth> {
+    pub inner: T,
+    pub max_vol: VolumeControl,
 }
 
 impl<T: Synth> Synth for Clip<T> {
@@ -13,6 +15,7 @@ impl<T: Synth> Synth for Clip<T> {
     }
 }
 
+#[derive(Clone, Debug, Default)]
 pub struct Mixer {
     sub_synths: Vec<(SynthType, VolumeControl)>,
 }
@@ -35,6 +38,12 @@ impl VolumeControl {
     }
 }
 
+impl Default for VolumeControl {
+    fn default() -> Self {
+        VolumeControl(1.0)
+    }
+}
+
 impl TryFrom<f32> for VolumeControl {
     type Error = SynthError;
 
@@ -46,6 +55,7 @@ impl TryFrom<f32> for VolumeControl {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct Silence;
 
 impl Synth for Silence {
@@ -60,6 +70,7 @@ pub enum SynthError {
     NegativeVolume(f32),
 }
 
+#[derive(Clone, Debug)]
 pub enum SynthType {
     Clip(Clip<Box<SynthType>>),
     Mixer(Mixer),
@@ -76,7 +87,7 @@ impl Synth for SynthType {
     }
 }
 
-pub trait Synth {
+pub trait Synth: Clone {
     fn sample(&mut self) -> f32;
 }
 
