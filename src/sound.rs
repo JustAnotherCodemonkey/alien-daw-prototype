@@ -5,7 +5,6 @@ use cpal::{
     DefaultStreamConfigError, Device, DevicesError, Host, Stream, StreamConfig,
     SupportedStreamConfigsError,
 };
-use std::sync::Arc;
 use thiserror::Error;
 
 pub struct Server {

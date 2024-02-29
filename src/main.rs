@@ -2,7 +2,6 @@
 
 pub use std::sync::Arc;
 
-
 mod sound;
 mod synth;
 use tokio::runtime::Builder;
@@ -18,10 +17,9 @@ pub mod backend;
 
 fn main() -> Result<(), anyhow::Error> {
     tracing_subscriber::fmt().init();
-
     let rt = Builder::new_multi_thread().build()?;
     let _logic_task = rt.spawn(logic());
-    build_window();
+    tokio::runtime::Runtime::block_on(&rt, build_window()); //put a cfg flag here for wasm. browsers execute futures natively
     println!("Hello, world!");
     Ok(())
 }
@@ -29,12 +27,13 @@ fn main() -> Result<(), anyhow::Error> {
 #[instrument]
 async fn logic() {}
 
-fn build_window() {
+async fn build_window() {
     let evntloop = EventLoop::new().unwrap();
     let window = WindowBuilder::new().build(&evntloop).unwrap();
     window.set_title("ALIEN DAW");
     //rerender after every event
     evntloop.set_control_flow(ControlFlow::Wait);
+    let mut state = backend::CurrentWindowState::new(window.into()).await;
 
     match evntloop.run(move |event, elwt| {
         //match on event
@@ -45,15 +44,31 @@ fn build_window() {
             //match on events that happen in the window
             Event::WindowEvent {
                 ref event,
-                window_id: _,
-            } => match event {
-                WindowEvent::CloseRequested {} => elwt.exit(),
-                WindowEvent::Resized(PhysicalSize {
-                    width: _,
-                    height: _,
-                }) => {} //cant find logic to resize the window
-                _ => {}
-            },
+                window_id,
+            } if window_id == state.window().id() => {
+                if !state.input(event) {
+                    match event {
+                        WindowEvent::CloseRequested {} => elwt.exit(),
+                        WindowEvent::Resized(size) => state.resize(*size),
+                        WindowEvent::ScaleFactorChanged {
+                            scale_factor,
+                            inner_size_writer,
+                        } => {
+                            state.resize(todo!());
+                        } //open an issue or make a pull req. the docs have not been updated
+                        WindowEvent::RedrawRequested =>{
+                            //state.update();
+                            match state.render(){
+                                Ok(_) => {},
+                                Err(wgpu::SurfaceError::Lost) => state.resize(state.get_size()),
+                                Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
+                                Err(e) => eprintln!("{}", e)
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
             _ => {}
         }
     }) {

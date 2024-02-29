@@ -1,9 +1,8 @@
 use crate::*;
-use std::sync::Arc;
 
 //https://sotrh.github.io/learn-wgpu/beginner/tutorial2-surface/#first-some-housekeeping-state
-struct CurrentWindowState{
-    surface: wgpu::Surface <'static>,
+pub(crate) struct CurrentWindowState {
+    surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     configuration: wgpu::SurfaceConfiguration,
@@ -11,35 +10,14 @@ struct CurrentWindowState{
     window: Arc<Window>,
 }
 
-// struct CloneableWindow{
-//     internal: Window
-// }
-
-// impl Clone for CloneableWindow{
-//     fn clone(&self) -> Self {
-//         CloneableWindow { internal: self.internal }
-//     }
-// }
-
-// impl CloneableWindow{
-//     fn from_window(window: &Window) -> Self{
-//         Self { internal: windo }
-//     }
-
-//     fn to_window(&self) -> Window{
-//         self.internal
-//     }
-// }
-
-impl CurrentWindowState{
-    async fn new(window: Arc<Window>) -> Self {
+impl CurrentWindowState {
+    pub(crate) async fn new(window: Arc<Window>) -> Self {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
-        let surface = wgpu::Instance
-            ::create_surface(&instance, window.clone())
+        let surface = wgpu::Instance::create_surface(&instance, window.clone())
             .expect("Creation of surface failed!");
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptionsBase {
@@ -88,16 +66,59 @@ impl CurrentWindowState{
             window,
         };
     }
-    fn resize(&mut self, new: PhysicalSize<u32>) {
+    pub(crate) fn window(&self) -> &Window {
+        &self.window.as_ref()
+    }
+    pub(crate) fn resize(&mut self, new: PhysicalSize<u32>) {
+        if new.width > 0 && new.height > 0 {
+            self.size = new;
+            self.configuration.width = new.width;
+            self.configuration.height = new.height;
+            self.surface.configure(&self.device, &self.configuration);
+        }
+    }
+    pub(crate) fn get_size(&self) -> PhysicalSize<u32> {
+        self.size
+    }
+    pub(crate) fn input(&mut self, event: &WindowEvent) -> bool {
+        false
+    }
+    pub(crate) fn update(&mut self) {
         todo!()
     }
-    fn input(&mut self, event: &WindowEvent) -> bool {
-        todo!()
-    }
-    fn update(&mut self) {
-        todo!()
-    }
-    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        todo!()
+    pub(crate) fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        let output = self.surface.get_current_texture()?;
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut cmdenconder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+        {
+            let _render_pass = cmdenconder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            });
+        }
+        self.queue.submit(std::iter::once(cmdenconder.finish()));
+        output.present();
+        Ok(())
     }
 }
