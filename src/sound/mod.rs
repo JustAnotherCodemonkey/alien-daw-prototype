@@ -1,6 +1,6 @@
 pub mod synth;
+mod util;
 
-use crate::synth::{Clip, Mixer, Synth};
 use cpal::{
     default_host,
     traits::{DeviceTrait, HostTrait},
@@ -14,10 +14,11 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use synth::{Clip, Mixer, Synth};
 use thiserror::Error;
 use tokio::sync::mpsc::UnboundedSender;
 
-struct BackupFairMutex<T: Clone> {
+struct BackupFairMutex<T> {
     local: T,
     pub remote: Arc<FairMutex<T>>,
 }
@@ -100,7 +101,7 @@ impl<'a, T> std::ops::Deref for BackupFairMutexGuard<'a, T> {
     fn deref(&self) -> &Self::Target {
         match self {
             BackupFairMutexGuard::LocalRef(r) => r,
-            BackupFairMutexGuard::RemoteGuard(g) => &*g,
+            BackupFairMutexGuard::RemoteGuard(g) => g,
         }
     }
 }
@@ -117,17 +118,19 @@ impl<'a, T> std::ops::DerefMut for BackupFairMutexGuard<'a, T> {
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(transparent)]
-    BuildStreamError(#[from] BuildStreamError),
+    BuildStream(#[from] BuildStreamError),
     #[error(transparent)]
-    CallbackSpeedError(#[from] CallbackSpeedError),
+    CallbackSpeed(#[from] CallbackSpeedError),
     #[error(transparent)]
-    DefaultStreamConfigError(#[from] DefaultStreamConfigError),
+    DefaultStreamConfig(#[from] DefaultStreamConfigError),
     #[error(transparent)]
-    DevicesError(#[from] DevicesError),
+    Devices(#[from] DevicesError),
     #[error("the host has no available devices")]
     NoDevices,
     #[error(transparent)]
-    SupportedStreamConfigsError(#[from] SupportedStreamConfigsError),
+    SupportedStreamConfigs(#[from] SupportedStreamConfigsError),
+    #[error("smaple format {} is not currently supported", .0)]
+    UnimplementedSampleFormat(SampleFormat),
 }
 
 #[derive(Clone, Copy, Debug, Error)]
@@ -197,31 +200,28 @@ fn build_output_stream(
     let sample_format = supported_stream_config.sample_format();
     let stream_config = supported_stream_config.into();
 
+    let args = (
+        prime_source,
+        callback_speed_warning_channel,
+        &stream_config,
+        err_channel,
+        device,
+    );
     match sample_format {
-        SampleFormat::F32 => build_output_stream_inner::<f32>(
-            prime_source,
-            callback_speed_warning_channel,
-            &stream_config,
-            err_channel,
-            device,
-        ),
-        SampleFormat::F64 => build_output_stream_inner::<f64>(
-            prime_source,
-            callback_speed_warning_channel,
-            &stream_config,
-            err_channel,
-            device,
-        ),
-        _ => unimplemented!("sample format of default output device not supported"),
+        SampleFormat::F32 => build_output_stream_inner::<f32>(args),
+        SampleFormat::F64 => build_output_stream_inner::<f64>(args),
+        _ => Err(Error::UnimplementedSampleFormat(sample_format)),
     }
 }
 
 fn build_output_stream_inner<T: FromSample<f32> + Sample + SizedSample>(
-    prime_source: Arc<FairMutex<Clip<Mixer>>>,
-    callback_speed_warning_channel: Option<UnboundedSender<CallbackSpeedError>>,
-    stream_config: &StreamConfig,
-    err_channel: UnboundedSender<StreamError>,
-    device: &Device,
+    (prime_source, callback_speed_warning_channel, stream_config, err_channel, device): (
+        Arc<FairMutex<Clip<Mixer>>>,
+        Option<UnboundedSender<CallbackSpeedError>>,
+        &StreamConfig,
+        UnboundedSender<StreamError>,
+        &Device,
+    ),
 ) -> Result<Stream, Error> {
     let err_callback = build_err_callback(err_channel);
     match build_output_callback::<T>(prime_source, callback_speed_warning_channel) {
